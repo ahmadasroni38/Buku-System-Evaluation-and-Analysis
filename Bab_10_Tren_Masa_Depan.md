@@ -56,6 +56,160 @@ Metrik Total Cost of Ownership (TCO) yang dibahas dalam Bab 4 menjadi lebih komp
 
 Arsitektur sistem terdistribusi seperti microservices dan blockchain memperkenalkan tantangan evaluasi yang unik terkait observabilitas dan pengumpulan data. Dalam sistem microservices, di mana fungsionalitas aplikasi dipecah menjadi layanan-layanan kecil yang independen, mengobservasi alur transaksi end-to-end menjadi sangat menantang. Konsep **Distributed Tracing** menjadi kritis, memungkinkan evaluator untuk melacak permintaan saat melewati berbagai layanan dan mengidentifikasi bottleneck atau titik kegagalan.
 
+#### Distributed Tracing: Fondasi Observabilitas Modern
+
+Distributed tracing adalah teknik monitoring yang memungkinkan pelacakan permintaan atau transaksi saat melewati berbagai layanan dalam sistem terdistribusi. Berbeda dengan logging tradisional yang hanya mencatat kejadian lokal dalam setiap layanan, distributed tracing memberikan visibilitas end-to-end terhadap alur eksekusi request lintas multiple services, servers, dan bahkan data centers.
+
+**Komponen Kunci Distributed Tracing:**
+
+1. **Trace**: Representasi lengkap dari perjalanan sebuah request melalui sistem. Setiap trace memiliki Trace ID unik yang digunakan untuk mengkorelasikan semua aktivitas terkait.
+
+2. **Span**: Unit kerja individual dalam sebuah trace. Setiap span mewakili operasi tunggal (misalnya, panggilan ke database, request HTTP ke service lain, atau eksekusi fungsi internal). Span memiliki:
+   - Span ID unik
+   - Parent Span ID (untuk membentuk hierarki)
+   - Timestamp mulai dan durasi
+   - Metadata (tags, logs, baggage)
+   - Status (success, error, timeout)
+
+3. **Context Propagation**: Mekanisme untuk meneruskan Trace ID dan Span ID antar layanan. Context ini biasanya disisipkan dalam HTTP headers, message queues, atau protokol komunikasi lainnya.
+
+**Arsitektur Distributed Tracing:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         User Request                            │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ Trace ID: abc123
+                         ▼
+            ┌────────────────────────┐
+            │   API Gateway          │ Span 1: gateway-request (50ms)
+            │   [Span ID: span-1]    │
+            └─────┬──────────────┬───┘
+                  │              │
+     Trace ID propagated        │
+                  │              │
+        ┌─────────▼─────┐  ┌────▼──────────┐
+        │ Auth Service   │  │ Order Service │
+        │ [Span 2]       │  │ [Span 3]      │
+        │ (20ms)         │  │ (150ms)       │
+        └────────────────┘  └────┬──────────┘
+                                 │
+                                 │ Span 3 calls Span 4 & 5
+                            ┌────┴────┐
+                     ┌──────▼─────┐  ┌▼──────────────┐
+                     │  Payment   │  │  Inventory    │
+                     │  Service   │  │  Service      │
+                     │  [Span 4]  │  │  [Span 5]     │
+                     │  (80ms)    │  │  (40ms)       │
+                     └────────────┘  └───────────────┘
+```
+
+**Tools dan Platform Distributed Tracing:**
+
+1. **Jaeger**: Open-source distributed tracing platform yang dikembangkan oleh Uber. Jaeger menyediakan:
+   - UI intuitif untuk visualisasi trace
+   - Query language untuk filtering dan searching
+   - Service dependency graphs
+   - Adaptive sampling untuk mengontrol volume data
+   - Integrasi dengan Kubernetes dan service mesh
+
+2. **Zipkin**: Salah satu sistem distributed tracing open-source tertua, dikembangkan oleh Twitter. Zipkin menawarkan:
+   - Lightweight dan mudah di-deploy
+   - Support untuk berbagai bahasa pemrograman
+   - Instrumentasi minimal
+   - Storage backend yang fleksibel (Cassandra, Elasticsearch, MySQL)
+
+3. **OpenTelemetry**: Standar open-source terbaru untuk observability yang menggabungkan OpenTracing dan OpenCensus. OpenTelemetry menyediakan:
+   - Vendor-neutral APIs dan SDKs
+   - Automatic instrumentation untuk framework populer
+   - Unified telemetry collection (traces, metrics, logs)
+   - Exporters untuk berbagai backend (Jaeger, Zipkin, Prometheus, cloud providers)
+
+4. **Cloud-Native Solutions**:
+   - **AWS X-Ray**: Terintegrasi dengan layanan AWS, analisis latency otomatis
+   - **Google Cloud Trace**: Integrasi dengan Google Cloud Platform, AI-powered insights
+   - **Azure Application Insights**: Comprehensive APM dengan distributed tracing
+   - **Datadog APM**: Full-stack observability dengan distributed tracing
+
+**Implementasi Distributed Tracing:**
+
+Untuk mengimplementasikan distributed tracing, evaluator perlu mempertimbangkan:
+
+1. **Instrumentation**: Menambahkan kode untuk generate dan propagate trace context. Ada dua pendekatan:
+   - **Manual Instrumentation**: Developer secara eksplisit menambahkan tracing code
+   - **Auto-instrumentation**: Library atau agent secara otomatis menginstrumentasi aplikasi
+
+2. **Sampling Strategy**: Karena volume data trace bisa sangat besar, sampling menjadi krusial:
+   - **Head-based Sampling**: Keputusan sampling dibuat di awal request (misalnya, 10% dari semua request)
+   - **Tail-based Sampling**: Keputusan dibuat setelah trace selesai berdasarkan karakteristik (misalnya, hanya trace dengan error atau latency tinggi)
+   - **Adaptive Sampling**: Rate sampling disesuaikan secara dinamis berdasarkan traffic dan kondisi sistem
+
+3. **Data Volume Management**: Trade-off antara detail observability dan overhead:
+   - Storage costs untuk menyimpan trace data
+   - Network bandwidth untuk mengirim trace ke collector
+   - Performance overhead dari instrumentasi
+
+**Analisis dengan Distributed Tracing:**
+
+Distributed tracing memungkinkan berbagai analisis evaluasi:
+
+1. **Latency Analysis**: Mengidentifikasi layanan atau operasi yang berkontribusi paling besar terhadap latency total
+   ```
+   Total Request Time: 250ms
+   ├─ API Gateway: 50ms (20%)
+   ├─ Auth Service: 20ms (8%)
+   └─ Order Service: 150ms (60%)
+      ├─ Payment Service: 80ms (53% of Order Service)
+      └─ Inventory Service: 40ms (27% of Order Service)
+   ```
+
+2. **Error Tracking**: Melacak error ke layanan dan operasi spesifik yang menjadi root cause
+
+3. **Dependency Mapping**: Memvisualisasikan hubungan antar layanan dan mengidentifikasi critical paths
+
+4. **Performance Regression Detection**: Membandingkan trace metrics antar deployment untuk mendeteksi degradasi performa
+
+5. **Capacity Planning**: Menganalisis pola traffic dan resource utilization untuk merencanakan scaling
+
+**Best Practices Distributed Tracing:**
+
+1. **Consistent Naming Conventions**: Gunakan naming scheme yang konsisten untuk service dan operation names
+2. **Rich Context**: Tambahkan metadata yang relevan (user ID, request parameters, business context)
+3. **Correlation with Metrics and Logs**: Integrasikan traces dengan metrics dan logs untuk complete observability
+4. **Alert on Critical Paths**: Setup monitoring untuk critical user journeys
+5. **Regular Review**: Analisis trace secara berkala untuk identifikasi improvement opportunities
+
+**Studi Kasus: Debugging Latency Issue dengan Distributed Tracing**
+
+Sebuah e-commerce mengalami keluhan tentang checkout yang lambat. Dengan monitoring tradisional, mereka hanya melihat bahwa response time meningkat dari 200ms menjadi 2 detik, tetapi tidak tahu penyebabnya.
+
+Menggunakan Jaeger distributed tracing, tim evaluasi:
+
+1. **Mengaktifkan tracing** untuk semua layanan dalam checkout flow
+2. **Menganalisis trace** dari transaksi yang lambat dan menemukan waterfall timeline:
+   ```
+   Checkout Request (2000ms)
+   ├─ API Gateway (50ms)
+   ├─ Cart Service (100ms)
+   ├─ Inventory Check (30ms)
+   ├─ Payment Service (1800ms) ← Bottleneck!
+   │  ├─ Fraud Check (1750ms) ← Root Cause!
+   │  └─ Payment Gateway (50ms)
+   └─ Order Confirmation (20ms)
+   ```
+
+3. **Mengidentifikasi root cause**: Fraud Check service melakukan 50 database queries berurutan (N+1 query problem)
+
+4. **Implementasi fix**: Mengoptimalkan query menjadi single batch query
+
+5. **Verifikasi improvement**: Distributed tracing menunjukkan Payment Service turun dari 1800ms ke 120ms
+
+Hasil: Checkout time kembali normal, customer satisfaction meningkat 35%, dan tim mendapat insight untuk mengoptimalkan layanan lain dengan pola serupa.
+
+Distributed tracing telah menjadi tidak hanya tool untuk debugging, tetapi juga fundamental capability untuk memahami, mengoptimalkan, dan memastikan reliability sistem terdistribusi modern. Bagi evaluator sistem masa depan, kemampuan untuk mengimplementasikan, menganalisis, dan menginterpretasikan distributed traces akan menjadi skill yang esensial.
+
+#### Metrik dan Tantangan Evaluasi Sistem Terdistribusi
+
 Metrik evaluasi untuk sistem terdistribusi juga berbeda secara signifikan. Selain metrik kinerja tradisional seperti throughput dan response time, evaluator perlu memperhatikan metrik spesifik seperti latency antar layanan, tingkat kegagalan layanan individual, dan tingkat retries. Dalam sistem blockchain, tantangan evaluasi meliputi analisis throughput transaksi, konsumsi sumber daya (gas dalam Ethereum), dan konsensus jaringan.
 
 ### Evaluasi Sistem Real-time

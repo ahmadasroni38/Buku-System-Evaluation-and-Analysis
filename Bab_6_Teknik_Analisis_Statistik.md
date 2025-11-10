@@ -13,8 +13,17 @@
 
 1. **Random Sampling (Simple Random Sampling)**
    - Setiap elemen populasi memiliki peluang yang sama untuk terpilih
-   - Formula: `n = N / (1 + N(e)²)` di mana n = ukuran sampel, N = ukuran populasi, e = margin of error
-   - Contoh: Memilih 100 user secara acak dari 1000 user aktif untuk evaluasi usability
+   - Berguna ketika populasi homogen
+   - Contoh: Dari populasi 1000 user aktif sistem CRM, ingin mengambil sampel dengan margin of error 5%:
+     ```
+     n = N / (1 + N(e)²)
+       = 1000 / (1 + 1000(0.05)²)
+       = 1000 / (1 + 1000(0.0025))
+       = 1000 / (1 + 2.5)
+       = 1000 / 3.5
+       = 285.7 ≈ 286 user
+     ```
+     Dengan demikian, perlu mengambil minimal 286 user secara acak dari 1000 user untuk mencapai margin of error 5%.
 
 2. **Stratified Sampling**
    - Populasi dibagi menjadi strata (subkelompok) homogen, kemudian sampling dilakukan dari setiap stratum
